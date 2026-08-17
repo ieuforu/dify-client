@@ -8,7 +8,8 @@ import { createBillingModule } from './modules/billing'
 import { createFileModule } from './modules/file'
 import { createWorkflowModule, createChatflowModule } from './modules/core'
 
-const DEFAULT_BASE_URL = 'https://ai.vskxc.com/v1'
+// 默认使用 /api（代理模式），各项目可覆盖
+const DEFAULT_BASE_URL = '/api'
 
 /**
  * 创建 DifyClient 实例
@@ -34,6 +35,11 @@ export function createDifyClient(config: DifyClientConfig): DifyClient {
   const fullConfig: DifyClientConfig = {
     baseUrl: DEFAULT_BASE_URL,
     ...config,
+  }
+  
+  // 移除末尾的斜杠
+  if (fullConfig.baseUrl) {
+    fullConfig.baseUrl = fullConfig.baseUrl.replace(/\/+$/, '')
   }
 
   return {
