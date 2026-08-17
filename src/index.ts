@@ -1,21 +1,27 @@
-// ── Types ──
+// ═══════════════════════════════════════════════════════════════════════════
+//  @skxc/dify-client 入口
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── 工厂函数 ──
+export { createDifyClient } from './client'
+
+// ── 类型定义 ──
 export type {
-  LoginMethod,
+  DifyClient,
+  DifyClientConfig,
+  DifyTokens,
   DifyContact,
+  LoginMethod,
+  AuthResult,
+  UserProfile,
+  CheckPointsResult,
   ProgressEvent,
-  DifyClientOptions,
-  ChatflowOptions,
-  WorkflowResult,
-} from "./types";
-export { difyUserInput } from "./types";
+} from './types'
 
-// ── Stream ──
-export { readSSEStream } from "./stream";
+// ── 工具函数 ──
+export { difyUserInput } from './types'
 
-// ── Client ──
-export { difyWorkflow, difyChatflow, uploadFile } from "./client";
-
-// ── Messages ──
+// ── 错误消息 ──
 export {
   COMMON_MESSAGES,
   LOGIN_MESSAGES,
@@ -24,21 +30,13 @@ export {
   CHECK_POINTS_MESSAGES,
   mergeMessages,
   getErrorMessage,
-} from "./messages";
+} from './messages'
 
-// ── Auth ──
-export {
-  buildContact,
-  authenticate,
-  sendEmailVercode,
-  sendPhoneVercode,
-  checkVerifyCode,
-  resetPassword,
-  checkUser,
-  checkInvitationCode,
-  fetchUserProfile,
-} from "./auth";
+// ── SSE 流解析 ──
+export { readSSEStream } from './stream'
 
-// ── Billing ──
-export type { CheckPointsResult } from "./billing";
-export { checkPoints, handleDeductPoints } from "./billing";
+// ── 模块（高级用法，一般不需要直接使用） ──
+export { createAuthModule } from './modules/auth'
+export { createBillingModule } from './modules/billing'
+export { createFileModule } from './modules/file'
+export { createWorkflowModule, createChatflowModule } from './modules/core'

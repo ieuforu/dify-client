@@ -1,6 +1,6 @@
 {
   "name": "@skxc/dify-client",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "files": [
     "dist"
   ],
@@ -20,6 +20,15 @@
     "dev": "vite build --watch",
     "fmt": "oxfmt"
   },
+  "keywords": [
+    "dify",
+    "ai",
+    "workflow",
+    "chatflow",
+    "client"
+  ],
+  "author": "",
+  "license": "MIT",
   "devDependencies": {
     "@types/node": "^26.1.2",
     "oxfmt": "^0.62.0",
@@ -27,13 +36,8 @@
     "vite": "^8.2.1",
     "vite-plugin-dts": "^5.0.3"
   },
-  "peerDependencies": {
-    "sonner": ">=1.0.0"
-  },
-  "peerDependenciesMeta": {
-    "sonner": {
-      "optional": true
-    }
+  "dependencies": {
+    "sonner": "^1.0.0"
   },
   "engines": {
     "node": ">=18"

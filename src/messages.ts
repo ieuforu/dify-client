@@ -1,5 +1,8 @@
-// ── 通用错误码（三个项目100%一致） ──
+// ═══════════════════════════════════════════════════════════════════════════
+//  错误消息映射
+// ═══════════════════════════════════════════════════════════════════════════
 
+/** 通用错误码（所有模块共用） */
 export const COMMON_MESSAGES: Record<number, string> = {
   200: "操作成功",
   201: "未找到该用户",
@@ -9,18 +12,20 @@ export const COMMON_MESSAGES: Record<number, string> = {
   2012: "该邮箱已被注册",
 };
 
-// ── Context-specific（同一code不同含义） ──
-
+/** 登录错误码 */
 export const LOGIN_MESSAGES: Record<number, string> = {
+  201: "账号不存在，请先注册",
   203: "账号已被禁用",
   204: "密码错误",
 };
 
+/** 注册错误码 */
 export const SIGNUP_MESSAGES: Record<number, string> = {
   201: "账号已被注册，请直接登录",
   203: "邀请码无效",
 };
 
+/** 邀请码错误码 */
 export const INVITATION_MESSAGES: Record<number, string> = {
   201: "未查询到该用户信息",
   203: "邀请码无效",
@@ -28,18 +33,17 @@ export const INVITATION_MESSAGES: Record<number, string> = {
   205: "该邀请码已过期",
 };
 
+/** 积分错误码 */
 export const CHECK_POINTS_MESSAGES: Record<number, string> = {
   203: "Token余额不足",
 };
 
-// ── 合并工具 ──
-
-/** 合并多层错误码映射，后者覆盖前者 */
+/** 工具函数：合并多个错误消息映射 */
 export function mergeMessages(...layers: Record<number, string>[]): Record<number, string> {
   return Object.assign({}, ...layers);
 }
 
-/** 从合并后的映射中获取消息，兜底 '操作失败' */
+/** 工具函数：根据 code 获取错误消息 */
 export function getErrorMessage(code: number, messages: Record<number, string>): string {
   return messages[code] || "操作失败";
 }

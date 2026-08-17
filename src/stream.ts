@@ -1,6 +1,10 @@
-// ── SSE 流解析 ──
+// ═══════════════════════════════════════════════════════════════════════════
+//  SSE 流解析
+// ═══════════════════════════════════════════════════════════════════════════
 
-/** 逐行解析 SSE 流，yield 每个 JSON 事件对象 */
+/**
+ * 逐行解析 SSE 流，yield 每个 JSON 事件对象
+ */
 export async function* readSSEStream(
   reader: ReadableStreamDefaultReader<Uint8Array>,
   signal?: AbortSignal,
@@ -27,6 +31,7 @@ export async function* readSSEStream(
     }
   }
 
+  // 处理最后的 partial line
   if (!signal?.aborted && partialLine.startsWith("data:")) {
     try {
       yield JSON.parse(partialLine.slice(5).trim());
