@@ -33,9 +33,8 @@ export async function uploadRequest(
   file: File,
   userId: string
 ): Promise<any> {
-  // 上传接口路径：去掉 /v1 后缀
-  const baseUrl = apiBase.replace(/\/v1\/?$/, '')
-  const url = `${baseUrl}/files/upload`
+  // 上传接口路径：/v1/files/upload
+  const url = `${apiBase}/files/upload`
 
   const formData = new FormData()
   formData.append('file', file)
