@@ -52,33 +52,39 @@ export function createAuthModule(config: DifyClientConfig): AuthModule {
   }
 
   return {
+    /* 登录 */
     async login(inputs, user) {
       if (!tokens.login) throw new Error("未配置 login token");
       const outputs = await runWorkflow<AuthResult>(tokens.login, inputs, user);
       return outputs;
     },
 
+    /* 注册 */
     async signup(inputs, user) {
       if (!tokens.signup) throw new Error("未配置 signup token");
       const outputs = await runWorkflow<AuthResult>(tokens.signup, inputs, user);
       return outputs;
     },
 
+    /* 发送邮箱验证码 */
     async sendEmailVercode(email) {
       if (!tokens.sendEmailCode) throw new Error("未配置 sendEmailCode token");
       return runWorkflow(tokens.sendEmailCode, { email }, email);
     },
 
+    /* 发送手机验证码 */
     async sendPhoneVercode(phone) {
       if (!tokens.sendPhoneCode) throw new Error("未配置 sendPhoneCode token");
       return runWorkflow(tokens.sendPhoneCode, { user_phone: phone }, phone);
     },
 
+    /* 验证码核对 */
     async checkVerifyCode(contact, code) {
       if (!tokens.checkCode) throw new Error("未配置 checkCode token");
       return runWorkflow(tokens.checkCode, { EmailOrPhone: contact, ver_code: code }, contact);
     },
 
+    /* 重置密码 */
     async resetPassword(contact, newPassword) {
       if (!tokens.resetPassword) throw new Error("未配置 resetPassword token");
       return runWorkflow(
@@ -88,6 +94,7 @@ export function createAuthModule(config: DifyClientConfig): AuthModule {
       );
     },
 
+    /* 检查用户是否存在 */
     async checkUser(contact) {
       if (!tokens.checkUser) throw new Error("未配置 checkUser token");
       const outputs = await runWorkflow<{ code: number }>(
@@ -103,11 +110,13 @@ export function createAuthModule(config: DifyClientConfig): AuthModule {
       return outputs;
     },
 
+    /* 查询用户个人信息【用户基本信息查询】 */
     async fetchUserProfile(contact) {
       if (!tokens.checkUser) throw new Error("未配置 checkUser token");
       return runWorkflow(tokens.checkUser, difyUserInput(contact), contact.value);
     },
 
+    /* 邀请码核销 */
     async checkInvitationCode(code, contact) {
       if (!tokens.checkInvitationCode) throw new Error("未配置 checkInvitationCode token");
       const outputs = await runWorkflow<{ code: number }>(

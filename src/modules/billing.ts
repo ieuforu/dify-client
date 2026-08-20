@@ -56,6 +56,12 @@ export function createBillingModule(config: DifyClientConfig): BillingModule {
   }
 
   return {
+    /*
+    
+      检查余额是否足够抵扣此次所消耗的token
+      对应Dify Workflow【App额度核查】
+    
+    */
     async checkPoints(contact, limit) {
       if (!tokens.checkPoints) throw new Error("未配置 checkPoints token");
 
@@ -71,6 +77,11 @@ export function createBillingModule(config: DifyClientConfig): BillingModule {
       };
     },
 
+    /*
+    
+      对应Dify Workflow【积分扣除】
+    
+    */
     async handleDeductPoints(contact, credits, options = {}) {
       if (!tokens.deductPoints) throw new Error("未配置 deductPoints token");
 
@@ -86,6 +97,12 @@ export function createBillingModule(config: DifyClientConfig): BillingModule {
       );
     },
 
+    /*
+    
+      支付宝充值，目前只支持支付宝的url
+      TODO: 待Dify chatflow接入微信支付这里需要改造。
+    
+    */
     async recharge(contact, amount, options = {}) {
       if (!tokens.recharge) throw new Error("未配置 recharge token");
 
