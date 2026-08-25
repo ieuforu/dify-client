@@ -10,13 +10,5 @@ export default defineConfig({
       formats: ["es", "cjs"],
       fileName: "index",
     },
-    rolldownOptions: {
-      external: ["sonner"],
-      output: {
-        globals: {
-          sonner: "sonner",
-        },
-      },
-    },
   },
 });

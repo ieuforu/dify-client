@@ -32,7 +32,7 @@ export interface ProgressEvent {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export interface DifyClientConfig {
-  /** API 基础地址，默认 'https://ai.vskxc.com/v1' */
+  /** API 基础地址，默认 '/api'（代理模式） */
   baseUrl?: string;
 
   /** Token 配置 */
@@ -51,7 +51,9 @@ export interface DifyTokens {
   checkCode?: string;
   resetPassword?: string;
   checkUser?: string;
+  agentProfile?: string;
   checkInvitationCode?: string;
+  giftPoints?: string;
 
   // 计费
   checkPoints?: string;
@@ -73,7 +75,7 @@ export interface AuthResult {
   code: number;
   success?: boolean;
   message?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface UserProfile {
@@ -94,60 +96,140 @@ export interface CheckPointsResult {
   message?: string;
 }
 
+/**
+ * @deprecated checkPoints 现在失败直接 throw DifyError，不再返回此类型
+ * 保留仅为向下兼容
+ */
+
+export interface UserProfileResult {
+  code: number;
+  data: Array<{ result: UserProfile[] }>;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  用户状态（localStorage 持久化）
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface UserData {
+  email: string;
+  phone: string;
+  loginMethod: LoginMethod;
+  role: "user" | "agent";
+}
+
+export interface UserState {
+  /** 设置用户（登录/注册成功后调用，自动持久化） */
+  setUser(data: {
+    email?: string;
+    phone?: string;
+    loginMethod: LoginMethod;
+    role?: "user" | "agent";
+  }): void;
+
+  /** 获取当前用户，未登录返回 null */
+  getUser(): UserData | null;
+
+  /** 获取 DifyContact，未登录返回 null */
+  getContact(): DifyContact | null;
+
+  /** 获取 userId（email 或 phone），未登录返回 'anonymous' */
+  getUserId(): string;
+
+  /** 获取显示名称（邮箱前缀 / 手机号脱敏） */
+  getDisplayName(): string;
+
+  /** 是否已登录 */
+  isLogin(): boolean;
+
+  /** 登出（清除状态） */
+  logout(): void;
+
+  /** 查询用户个人信息 */
+  getProfile(): Promise<UserProfile>;
+
+  /** 查询代理信息 */
+  getAgentProfile(agentEmail: string): Promise<UserProfile>;
+
+  /** 监听用户状态变化（用于 React/Vue 响应式） */
+  subscribe(listener: () => void): () => void;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 //  DifyClient 接口
 // ═══════════════════════════════════════════════════════════════════════════
 
 export interface DifyClient {
-  // 认证模块
+  /** 用户状态管理（单例，跨实例共享 localStorage） */
+  user: UserState;
+
+  /** 认证模块 */
   auth: {
-    login(inputs: Record<string, any>, user: string): Promise<AuthResult>;
-    signup(inputs: Record<string, any>, user: string): Promise<AuthResult>;
-    sendEmailVercode(email: string): Promise<any>;
-    sendPhoneVercode(phone: string): Promise<any>;
-    checkVerifyCode(contact: string, code: string): Promise<any>;
-    resetPassword(contact: DifyContact, newPassword: string): Promise<any>;
-    checkUser(contact: DifyContact): Promise<any>;
-    fetchUserProfile(contact: DifyContact): Promise<any>;
-    checkInvitationCode(code: string, contact: DifyContact): Promise<any>;
+    /**
+     * 登录（推荐使用）
+     * - 自动构造 inputs
+     * - 自动持久化用户状态
+     * - 失败 throw DifyError
+     */
+    authenticate(params: { account: string; password: string }): Promise<void>;
+    /**
+     * 注册（不自动持久化）
+     * - 失败 throw DifyError
+     * - 成功返回 void，上层跳转登录页即可
+     */
+    signupOnly(params: {
+      name?: string;
+      email?: string;
+      phone?: string;
+      password?: string;
+    }): Promise<void>;
+    sendEmailVercode(email: string): Promise<void>;
+    sendPhoneVercode(phone: string): Promise<void>;
+    checkVerifyCode(contact: string, code: string): Promise<void>;
+    resetPassword(contact: DifyContact, newPassword: string): Promise<void>;
+    checkUser(contact: DifyContact): Promise<void>;
+    checkInvitationCode(code: string, contact: DifyContact): Promise<void>;
+    /** 注册赠送积分 */
+    giftPoints(contact: DifyContact, user: string): Promise<unknown>;
   };
 
-  // 计费模块
+  /** 计费模块 */
   billing: {
-    checkPoints(contact: DifyContact, limit: number): Promise<CheckPointsResult>;
+    /** 检查余额是否足够，不足时 throw DifyError (code=203) */
+    checkPoints(contact: DifyContact, limit: number): Promise<void>;
+    /** 扣除积分 */
     handleDeductPoints(
       contact: DifyContact,
       credits: number,
       options?: { difyAppId?: string; remark?: string },
-    ): Promise<any>;
+    ): Promise<void>;
+    /** 充值，返回支付宝支付链接 */
     recharge(
       contact: DifyContact,
       amount: number,
-      options?: {
-        signal?: AbortSignal;
-      },
+      options?: { signal?: AbortSignal },
     ): Promise<string>;
   };
 
-  // 文件模块
+  /** 文件模块 */
   file: {
     upload(file: File, userId: string): Promise<{ id: string }>;
   };
 
-  // 底层能力
+  /** 底层 Workflow */
   workflow: {
-    run<T = any>(options: {
+    run<T = unknown>(options: {
       token?: string;
-      inputs: Record<string, any>;
+      inputs: Record<string, unknown>;
       user?: string;
     }): Promise<T>;
   };
 
+  /** 底层 Chatflow（SSE 流式） */
   chatflow: {
     stream(
       body: {
         token?: string;
-        inputs: Record<string, any>;
+        inputs: Record<string, unknown>;
         query: string;
         user: string;
       },

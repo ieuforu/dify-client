@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 // ── 工厂函数 ──
-export { createDifyClient } from './client'
+export { createDifyClient } from "./client";
 
 // ── 类型定义 ──
 export type {
@@ -16,10 +16,13 @@ export type {
   UserProfile,
   CheckPointsResult,
   ProgressEvent,
-} from './types'
+  UserData,
+  UserState,
+} from "./types";
 
 // ── 工具函数 ──
-export { difyUserInput } from './types'
+export { difyUserInput } from "./types";
+export { DifyError } from "./utils";
 
 // ── 错误消息 ──
 export {
@@ -28,15 +31,17 @@ export {
   SIGNUP_MESSAGES,
   INVITATION_MESSAGES,
   CHECK_POINTS_MESSAGES,
+  AUTH_ERROR_MESSAGES,
   mergeMessages,
   getErrorMessage,
-} from './messages'
+} from "./messages";
 
 // ── SSE 流解析 ──
-export { readSSEStream } from './stream'
+export { readSSEStream } from "./stream";
 
 // ── 模块（高级用法，一般不需要直接使用） ──
-export { createAuthModule } from './modules/auth'
-export { createBillingModule } from './modules/billing'
-export { createFileModule } from './modules/file'
-export { createWorkflowModule, createChatflowModule } from './modules/core'
+export { createAuthModule } from "./modules/auth";
+export { createBillingModule } from "./modules/billing";
+export { createFileModule } from "./modules/file";
+export { createWorkflowModule, createChatflowModule } from "./modules/core";
+export { createUserState } from "./modules/user";

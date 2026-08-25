@@ -38,6 +38,24 @@ export const CHECK_POINTS_MESSAGES: Record<number, string> = {
   203: "Token余额不足",
 };
 
+/** authenticate 专用错误码（按 mode 分组） */
+export const AUTH_ERROR_MESSAGES: Record<string, Record<number, string>> = {
+  login: {
+    201: "账号不存在，请先注册",
+    202: "参数错误",
+    203: "账号已被禁用",
+    204: "密码错误",
+    500: "后台错误，登录失败",
+  },
+  signup: {
+    201: "账号已被注册，请直接登录",
+    202: "参数错误（邮箱和电话请至少填写一项）",
+    2011: "该手机号已被注册",
+    2012: "该邮箱已被注册",
+    500: "后台错误，注册失败",
+  },
+};
+
 /** 工具函数：合并多个错误消息映射 */
 export function mergeMessages(...layers: Record<number, string>[]): Record<number, string> {
   return Object.assign({}, ...layers);

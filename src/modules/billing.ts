@@ -2,8 +2,7 @@
 //  计费模块
 // ═══════════════════════════════════════════════════════════════════════════
 
-import type { DifyClientConfig, DifyContact, CheckPointsResult } from "../types";
-import { request } from "../http";
+import type { DifyClientConfig, DifyContact } from "../types";
 import { difyUserInput } from "../types";
 import { readSSEStream } from "../stream";
 import {
@@ -12,81 +11,75 @@ import {
   mergeMessages,
   getErrorMessage,
 } from "../messages";
-import { toast } from "sonner";
+import { DifyError, runWorkflow } from "../utils";
 
 export interface BillingModule {
-  checkPoints(contact: DifyContact, limit: number): Promise<CheckPointsResult>;
+  /**
+   * 检查余额是否足够
+   * 底层：Dify Workflow [checkPoints] → inputs: { user_email/user_phone, single_limit }
+   * 不足时 throw DifyError (code=203)，上层可 e.code === 203 弹充值窗
+   */
+  checkPoints(contact: DifyContact, limit: number): Promise<void>;
+  /**
+   * 扣除积分
+   * 底层：Dify Workflow [deductPoints] → inputs: { user_email/user_phone, limit_verification, dify_app_id, remark }
+   */
   handleDeductPoints(
     contact: DifyContact,
     credits: number,
     options?: { difyAppId?: string; remark?: string },
-  ): Promise<any>;
+  ): Promise<void>;
+  /**
+   * 充值（支付宝）
+   * 底层：Dify Chatflow [recharge] → SSE 流式，从 message 中正则提取支付宝链接
+   * 返回：支付宝支付链接
+   */
   recharge(
     contact: DifyContact,
     amount: number,
-    options?: {
-      signal?: AbortSignal;
-    },
+    options?: { signal?: AbortSignal },
   ): Promise<string>;
 }
 
 export function createBillingModule(config: DifyClientConfig): BillingModule {
   const { baseUrl, tokens, errorMessages: customMessages = {} } = config;
-
-  // 合并错误消息
   const allMessages = mergeMessages(COMMON_MESSAGES, CHECK_POINTS_MESSAGES, customMessages);
 
-  /** 执行 Workflow */
-  async function runWorkflow<T = any>(
-    token: string,
-    inputs: Record<string, any>,
-    user: string,
-  ): Promise<T> {
-    const result = await request(baseUrl!, token, "/workflows/run", {
+  /** 执行 workflow 并检查 code，失败抛 DifyError */
+  async function runAndCheck(inputs: Record<string, unknown>, user: string): Promise<void> {
+    if (!tokens.deductPoints) throw new Error("未配置 deductPoints token");
+    const outputs = await runWorkflow<{ code?: number }>(
+      baseUrl!,
+      tokens.deductPoints,
       inputs,
       user,
-      response_mode: "blocking",
-    });
-
-    if (result.data?.status === "succeeded") {
-      return result.data.outputs as T;
+    );
+    if (outputs.code != null && outputs.code !== 200) {
+      throw new DifyError(outputs.code, getErrorMessage(outputs.code, allMessages));
     }
-
-    throw new Error(result.data?.error || "工作流执行失败");
   }
 
   return {
-    /*
-    
-      检查余额是否足够抵扣此次所消耗的token
-      对应Dify Workflow【App额度核查】
-    
-    */
+    /**
+     * 检查余额是否足够，不足时 throw DifyError
+     * code=203 表示余额不足（上层可 e.code === 203 弹充值窗）
+     */
     async checkPoints(contact, limit) {
       if (!tokens.checkPoints) throw new Error("未配置 checkPoints token");
-
-      const outputs = await runWorkflow<{ code: number }>(
+      const outputs = await runWorkflow<{ code?: number }>(
+        baseUrl!,
         tokens.checkPoints,
         { ...difyUserInput(contact), single_limit: limit },
         contact.value,
       );
-
-      return {
-        code: outputs.code,
-        message: getErrorMessage(outputs.code, allMessages),
-      };
+      if (outputs.code != null && outputs.code !== 200) {
+        throw new DifyError(outputs.code, getErrorMessage(outputs.code, allMessages));
+      }
     },
 
-    /*
-    
-      对应Dify Workflow【积分扣除】
-    
-    */
+    /** 扣除积分，失败 throw DifyError */
     async handleDeductPoints(contact, credits, options = {}) {
-      if (!tokens.deductPoints) throw new Error("未配置 deductPoints token");
-
-      return runWorkflow(
-        tokens.deductPoints,
+      await runAndCheck(
         {
           ...difyUserInput(contact),
           limit_verification: String(credits),
@@ -97,12 +90,10 @@ export function createBillingModule(config: DifyClientConfig): BillingModule {
       );
     },
 
-    /*
-    
-      支付宝充值，目前只支持支付宝的url
-      TODO: 待Dify chatflow接入微信支付这里需要改造。
-    
-    */
+    /**
+     * 充值（支付宝），返回支付宝支付链接
+     * 失败 throw Error
+     */
     async recharge(contact, amount, options = {}) {
       if (!tokens.recharge) throw new Error("未配置 recharge token");
 
@@ -113,19 +104,14 @@ export function createBillingModule(config: DifyClientConfig): BillingModule {
       return new Promise<string>((resolve, reject) => {
         let settled = false;
 
-        const chatUrl = `${baseUrl}/chat-messages`;
-
-        fetch(chatUrl, {
+        fetch(`${baseUrl}/chat-messages`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${tokens.recharge}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            inputs: {
-              ...difyUserInput(contact),
-              recharge_amount: amount,
-            },
+            inputs: { ...difyUserInput(contact), recharge_amount: amount },
             query: "充值",
             user: contact.value,
             response_mode: "streaming",
@@ -142,8 +128,9 @@ export function createBillingModule(config: DifyClientConfig): BillingModule {
                 if (settled) break;
 
                 if (data.event === "message") {
-                  const text = data.answer || "";
-                  const urlMatch = text.match(/https:\/\/openapi\.alipay\.com[^\s)]+/);
+                  const urlMatch = (data.answer || "").match(
+                    /https:\/\/openapi\.alipay\.com[^\s)]+/,
+                  );
                   if (urlMatch) {
                     settled = true;
                     internalController?.abort();
@@ -165,9 +152,8 @@ export function createBillingModule(config: DifyClientConfig): BillingModule {
             })();
           })
           .catch((err) => {
-            if (err.name === "AbortError") {
-              // 正常中止，不处理
-            } else if (!settled) {
+            if (err.name === "AbortError") return;
+            if (!settled) {
               settled = true;
               reject(new Error(err.message || "充值失败"));
             }
